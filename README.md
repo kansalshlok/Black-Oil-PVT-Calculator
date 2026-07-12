@@ -53,5 +53,3 @@ normal ranges), and explains the likely theoretical cause for each.
 - The gas properties assume a sweet (CO2/H2S-free) gas unless you enter
   non-zero CO2/H2S mole fractions in the sidebar, in which case the
   Wichert-Aziz correction is applied automatically.
-- Water properties assume the brine is essentially gas-free, which is the
-  standard assumption for a black-oil water leg away from the gas cap.
