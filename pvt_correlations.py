@@ -174,10 +174,10 @@ def gas_compressibility(P_array, Z_array):
     return 1.0 / P_array - (1.0 / Z_array) * dZ_dP
 
 GAS_METHOD_NOTES = {
-    "Pseudo-critical properties": "Sutton (1985), from gas specific gravity",
-    "Sour-gas correction":        "Wichert & Aziz (1972), for CO2 / H2S content (optional)",
-    "Z-factor":                   "Dranchuk & Abou-Kassem (1975), a close fit to the Standing-Katz "
+    "Pseudo-critical properties": "Sutton, from gas specific gravity",
+    "Sour-gas correction":        "Wichert & Aziz, for CO2 / H2S content (optional)",
+    "Z-factor":                   "Dranchuk & Abou-Kassem, a close fit to the Standing-Katz "
                                    "chart, valid for 0.2 <= Ppr <= 30 and 1.0 <= Tpr <= 3.0",
-    "Gas viscosity":              "Lee, Gonzalez & Eakin (1966)",
+    "Gas viscosity":              "Lee, Gonzalez & Eakin",
 }
 
