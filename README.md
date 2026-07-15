@@ -3,7 +3,7 @@
 A Streamlit dashboard for black-oil PVT property estimation.
 
 ## Live Demo
- Streamlit App: https://your-app-name.streamlit.app
+ Streamlit App: https://black-oil-pvt-calculator.streamlit.app
 
 ## What it does
 Fifteen black-oil PVT properties, each with individual pressure- and
