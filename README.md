@@ -21,7 +21,6 @@ temperature-sensitivity plots:
   and an optional Wichert & Aziz (1972) sour-gas (CO2/H2S) correction
 - Formation volume factor (Bg)
 - Viscosity: Lee-Gonzalez-Eakin (1966)
-- Isothermal compressibility (cg): numerical derivative of the Z(P) curve
 - Density
 
 An automated "Anomaly Check" tab flags out-of-range inputs, non-physical
