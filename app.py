@@ -12,7 +12,7 @@ from pvt_correlations import (
     oil_density, oil_density_undersaturated, total_oil_compressibility_saturated,
     VALID_RANGES,
     sutton_pseudocritical, wichert_aziz_correction, z_factor_dak,
-    gas_fvf, gas_fvf_bbl, gas_density, gas_viscosity_lee, gas_compressibility,
+    gas_fvf, gas_fvf_bbl, gas_density, gas_viscosity_lee,
     GAS_METHOD_NOTES,
 )
 
@@ -31,7 +31,7 @@ gamma_o = oil_gravity_sg(API)
 st.sidebar.markdown("---")
 st.sidebar.subheader("Plot ranges")
 P_min, P_max = st.sidebar.slider("Pressure range for P-sensitivity plots (psia)", 14.7, 12000.0, (14.7, max(P_res, 6000.0)))
-T_min, T_max = st.sidebar.slider("Temperature range for T-sensitivity plots (deg F)", 60.0, 350.0, (max(T_res - 60, 60.0), T_res + 60))
+T_min, T_max = st.sidebar.slider("Temperature range for T-sensitivity plots (deg F)", 60.0, 350.0, (100.0, T_res + 60))
 
 st.sidebar.markdown("---")
 rs_choice = st.sidebar.selectbox(
@@ -103,7 +103,6 @@ Bg_vs_P = gas_fvf(Z_vs_P, T_res, P_array)
 Bg_bbl_vs_P = gas_fvf_bbl(Z_vs_P, T_res, P_array)
 rho_g_vs_P = gas_density(gamma_g_raw, Z_vs_P, T_res, P_array)
 mu_g_vs_P = gas_viscosity_lee(gamma_g_raw, T_res, rho_g_vs_P)
-cg_vs_P = gas_compressibility(P_array, Z_vs_P)
 
 Ppr_fixedP = P_fixed_for_T / Ppc
 Tpr_vs_T = (T_array + 460.0) / Tpc
@@ -232,13 +231,6 @@ if np.any(np.diff(rho_g_vs_P) < -1e-9):
         "monotonically with pressure at constant temperature; a decrease again traces back to "
         "an unreliable Z-factor at that condition."))
 
-if np.any(cg_vs_P < 0):
-    anomalies.append(("warning",
-        "The computed gas compressibility (cg) is negative somewhere in the pressure sweep. "
-        "Gas compressibility should always be positive; a negative value here comes from "
-        "numerical noise in dZ/dP where the Z-factor curve is not smooth, usually because "
-        "part of the sweep lies outside the Z-factor correlation's valid Ppr/Tpr range."))
-
 if not anomalies:
     anomalies.append(("success", "No anomalies detected - all curves behave as expected from black-oil theory over the selected ranges."))
 
@@ -289,7 +281,7 @@ with tab_overview:
     st.subheader("Bubble-point pressure")
     df_pb = pd.DataFrame({"Correlation": list(pb_results.keys()),
                            "Bubble-Point Pressure (psia)": [round(v, 1) for v in pb_results.values()]})
-    st.dataframe(df_pb, hide_index=True, width='stretch')
+    st.dataframe(df_pb, hide_index=True)
 
     fig, ax = plt.subplots(figsize=(5, 3))
     ax.bar(df_pb["Correlation"], df_pb["Bubble-Point Pressure (psia)"], color=["#4C72B0", "#DD8452", "#55A868"])
@@ -298,9 +290,8 @@ with tab_overview:
     st.pyplot(fig, clear_figure=True)
 
     st.info(
-        f"At the base case (T = {T_res:.0f} deg F, Rsb = {Rsb:.0f} scf/STB), the selected "
-        f"set is **{rs_choice}**, giving Pb = {Pb_sel:.0f} psia. "
-        f"{'The reservoir pressure is above Pb (undersaturated oil).' if P_res > Pb_sel else 'The reservoir pressure is at or below Pb (saturated oil, free gas present).'}"
+        f"This chart compares bubble-point pressure predictions from the Standing, Vasquez–Beggs, and Glaso correlations."
+        f"\n{'The reservoir pressure is above Pb (undersaturated oil).' if P_res > Pb_sel else 'The reservoir pressure is at or below Pb (saturated oil, free gas present).'}"
     )
 
 with tab_pb:
@@ -318,6 +309,14 @@ with tab_pb:
     ax.legend()
     st.pyplot(fig, clear_figure=True)
 
+    st.info(
+        f"This plot shows the variation of bubble-point pressure with reservoir temperature using the Standing, Vasquez–Beggs, and Glaso correlations. "
+        f"For a given fluid composition and solution gas-oil ratio, increasing temperature reduces the solubility of gas in crude oil because "
+        f"the dissolved gas molecules possess greater thermal energy and are more likely to leave the liquid phase. As a result, "
+        f"a higher pressure is required to maintain the same dissolved gas content, causing the bubble-point pressure "
+        f"to increase with temperature."
+    )
+
 with tab_rs:
     st.subheader("Solution Gas-Oil Ratio, Rs")
     st.caption("Curves are capped at Rsb, since no additional gas can dissolve once the oil is saturated.")
@@ -333,6 +332,15 @@ with tab_rs:
     ax.legend()
     st.pyplot(fig, clear_figure=True)
 
+    st.info(
+        f"This plot illustrates the amount of gas dissolved in crude oil at different pressures "
+        f"using the Standing, Vasquez–Beggs, and Glaso correlations. Below the bubble-point pressure, "
+        f"Rs increases as pressure rises due to increased gas solubility. Once the bubble point is reached, "
+        f"Rs remains constant, indicating that the oil is fully saturated with dissolved gas. "
+        f"\n\nDifferences in the pressure at which each curve reaches the plateau reflect the varying "
+        f"bubble-point predictions of the empirical correlations.\n"
+    )
+
     st.markdown(f"#### Sensitivity to temperature (P fixed at {P_fixed_for_T:.0f} psia)")
     fig, ax = plt.subplots(figsize=(7, 4))
     for name, curve in rs_vs_T.items():
@@ -342,6 +350,15 @@ with tab_rs:
     ax.set_title("Gas solubility vs. temperature")
     ax.legend()
     st.pyplot(fig, clear_figure=True)
+
+    st.info(
+        f"This plot illustrates the temperature dependence of gas solubility in crude oil using the Standing, Vasquez–Beggs, "
+        f"and Glaso correlations. At lower temperatures, the fixed pressure exceeds the predicted bubble-point pressure, "
+        f"and the oil remains saturated, resulting in a constant solution gas-oil ratio equal to the specified input value. "
+        f"As temperature increases, the predicted bubble-point pressure also increases, reducing the ability of the oil to retain " 
+        f"dissolved gas at the same pressure. Consequently, the oil becomes undersaturated and the calculated Rs decreases. "
+        f"\n\nDifferences among the curves reflect the varying temperature sensitivities of the empirical correlations."
+    )
 
 with tab_bo:
     st.subheader("Oil Formation Volume Factor, Bo")
@@ -358,6 +375,15 @@ with tab_bo:
     ax.legend()
     st.pyplot(fig, clear_figure=True)
 
+    st.info(
+        f"This plot illustrates the variation of oil formation volume factor with pressure using the Standing, Marhoun, "
+        f"and Petrosky–Farshad correlations. As the pressure is reduced below the initial reservoir pressure, the oil volume increases "
+        f"due to the oil expansion. This behavior results in an increase in the oil formation volume factor and will "
+        f"continue until the bubble-point pressure is reached. At Pb, the oil reaches its maximum expansion and consequently "
+        f"attains a maximum value of the oil formation volume factor. As the pressure is reduced below pb, volume of the oil " 
+        f"and Bo are decreased as the solution gas is liberated."
+    )
+
     st.markdown("#### Sensitivity to temperature (evaluated at Rs = Rsb)")
     fig, ax = plt.subplots(figsize=(7, 4))
     for name, curve in bo_vs_T.items():
@@ -367,6 +393,13 @@ with tab_bo:
     ax.set_title("Oil FVF vs. temperature")
     ax.legend()
     st.pyplot(fig, clear_figure=True)
+
+    st.info(
+        f"This graph demonstrates the influence of temperature on the volumetric behavior of crude oil using the Standing, Marhoun, "
+        f"and Petrosky–Farshad correlations. At constant pressure, increasing temperature causes thermal expansion of the oil, leading "
+        f"to a higher formation volume factor. \n\nVariations among the predicted curves arise from the different empirical formulations "
+        f"and temperature dependencies of the selected correlations."
+    )
 
 with tab_visc:
     st.subheader("Oil Viscosity")
@@ -382,6 +415,15 @@ with tab_visc:
     ax.legend()
     st.pyplot(fig, clear_figure=True)
 
+    st.info(
+        f"This plot illustrates the variation of oil viscosity with pressure across both saturated and undersaturated conditions. "
+        f"Below the bubble-point pressure, increasing pressure dissolves more gas into the crude oil, which swells the oil "
+        f"and causes the oil viscosity to decrease. The viscosity reaches a minimum at the bubble point, where the oil contains the "
+        f"maximum amount of dissolved gas. Beyond the bubble point, no additional gas can dissolve into the oil, and further increases " 
+        f"in pressure compress the liquid phase, resulting in a gradual increase in viscosity. "
+        f"\n\nThe minimum therefore represents the transition from gas-solubility-dominated behavior to liquid-compression-dominated behavior."
+    )
+
     st.markdown("#### Sensitivity to temperature")
     fig, ax = plt.subplots(figsize=(7, 4))
     ax.plot(T_array, mu_od_vs_T, label="Dead oil (gas-free)")
@@ -392,17 +434,42 @@ with tab_visc:
     ax.legend()
     st.pyplot(fig, clear_figure=True)
 
+    st.info(
+        f"This graph compares the temperature dependence of dead-oil and saturated-oil viscosities. Increasing temperature enhances molecular " 
+        f"motion and weakens intermolecular forces within the liquid, resulting in a continuous decrease in viscosity. Saturated oil "
+        f"remains less viscous than dead oil throughout the temperature range because dissolved gas swells the oil and acts as a "
+        f"natural diluent, reducing internal friction and allowing the fluid to flow more readily."
+    )
+
 with tab_ocomp:
     st.subheader("Oil Compressibility, co")
     st.caption(
         f"Below Pb: total two-phase compressibility from the '{bo_choice}' Bo(P) and "
         f"'{rs_choice}' Rs(P) trends, co = -(1/Bo)(dBo/dP) + (Bg/Bo)(dRs/dP). "
-        "Above Pb: Vasquez-Beggs (1980) single-phase relation."
+        "Above Pb: Vasquez-Beggs single-phase relation."
     )
     fig = dual_plot(P_array, {"co": co_vs_P}, "Pressure (psia)",
                      T_array, {"co (undersaturated, VB)": co_vs_T}, "Temperature (deg F)",
                      "Compressibility (1/psi)", "Oil compressibility", vline1=Pb_sel)
     st.pyplot(fig, clear_figure=True)
+
+    st.info(
+        f"**Oil compressibility as a function of pressure:** \n\n"
+        f"This plot illustrates the variation of oil compressibility with pressure across saturated and undersaturated conditions. "
+        f"Below the bubble-point pressure, oil compressibility is relatively high because pressure changes not only compress the oil "
+        f"but also alter the amount of dissolved gas, resulting in significant volume changes. As pressure approaches the bubble point, " 
+        f"the effect of gas dissolution diminishes and the compressibility decreases. Above the bubble point, the oil exists "
+        f"as a single liquid phase with constant dissolved gas content, causing the compressibility to remain low and nearly constant, "
+        f"reflecting only the slight compressibility of the liquid phase. "
+    )
+
+    st.info(
+        f"**Oil compressibility as a function of temperature:** \n\n"
+        f"This plot shows the variation of oil compressibility with temperature at a fixed pressure. As temperature increases, "
+        f"hermal expansion reduces intermolecular cohesion and increases the sensitivity of the oil volume to pressure changes. "
+        f"Consequently, the oil compressibility exhibits a gradual increase with temperature. "
+        f"The magnitude of this variation remains relatively small, reflecting the inherently low compressibility of reservoir oils. "
+    )
 
     st.subheader("Oil Density, rho_o")
     st.caption(f"From material balance: rho_o = (62.4 gamma_o + 0.0136 Rs gamma_g) / Bo, "
@@ -412,18 +479,58 @@ with tab_ocomp:
                      "Oil density (lbm/ft3)", "Oil density", vline1=Pb_sel)
     st.pyplot(fig, clear_figure=True)
 
+    st.info(
+        f"**Oil density as a function of pressure:** \n\n"
+        f"This plot illustrates the variation of oil density with pressure, calculated from the material balance relation using the {bo_choice} "
+        f"oil formation volume factor correlation. Below the bubble-point pressure, increasing pressure dissolves additional gas into the "
+        f"oil, causing the oil to swell. The resulting increase in oil volume outweighs the increase in mass from the dissolved gas, "
+        f"leading to a reduction in oil density. The density reaches a minimum at the bubble point, where the oil contains the maximum " 
+        f"amount of dissolved gas. Above the bubble point, the dissolved gas content remains constant and further increases in pressure "
+        f"compress the liquid phase, causing the oil density to increase gradually. "
+    )
+    
+    st.info(
+        f"**Oil density as a function of temperature:** \n\n"
+        f"This graph demonstrates the influence of temperature on oil density. Increasing temperature causes thermal expansion of the "
+        f"crude oil, increasing its volume while maintaining essentially constant mass. Consequently, the oil density decreases with "
+        f"increasing temperature, illustrating the inverse relationship between density and thermal expansion."
+    )
+
+  
 with tab_gas:
     st.subheader("Gas Properties")
-    note = (f"Pseudo-criticals: Tpc = {Tpc:.1f} R, Ppc = {Ppc:.1f} psia "
-            f"({'Wichert-Aziz sour-gas corrected, ' if sour_gas else ''}Sutton). "
-            "Z-factor: Dranchuk-Abou-Kassem. Viscosity: Lee-Gonzalez-Eakin.")
-    st.caption(note)
-
-    st.markdown("#### Z-factor (gas deviation factor)")
+    c1, c2 = st.columns(2)
+    c1.metric("Pseudo-critical Temperature (deg R), Tpc", f"{Tpc:.2f}")
+    c2.metric("Pseudo-critical Pressure (psia), Ppc" , f"{Ppc:.2f}")
+    
+    c3, c4 = st.columns(2)
+    c3.metric("Pseudo-reduced Temperature (deg R), Tpr" , f"{(T_res+460)/Tpc:.2f}")
+    c4.metric("Pseudo-reduced Pressure (psia), Ppr" , f"{P_res/Ppc:.2f}")
+    st.markdown(f"#### Z-factor (gas deviation factor) using DAK EOS")
+    st.info(
+        "The correlation is recommended for reduced pressures of **0.2 ≤ Ppr ≤ 30** and reduced temperatures of **1.0 ≤ Tpr ≤ 3.0**"
+    )
+    st.warning(
+        "Results obtained outside this range should be interpreted with caution, as the prediction accuracy may decrease."
+    )
     fig = dual_plot(P_array, {"Z": Z_vs_P}, "Pressure (psia)",
                      T_array, {"Z": Z_vs_T}, "Temperature (deg F)",
                      "Z (dimensionless)", "Gas Z-factor")
     st.pyplot(fig, clear_figure=True)
+
+    st.info(
+        f"**Gas compressibility factor (Z) as a function of pressure:** "
+        f"This plot illustrates the variation of the gas compressibility factor with pressure at a constant temperature. At low "
+        f"pressures, gas molecules are widely separated and the gas behaves nearly ideally, resulting in Z values close to unity. " 
+        f"As pressure increases, attractive intermolecular forces become more significant, causing Z to decrease below one. Beyond "
+        f"a certain pressure, repulsive forces between closely packed molecules dominate, leading to an increase in Z."
+    )
+    st.info(
+       f"**Gas compressibility factor (Z) as a function of temperature:** This plot illustrates the influence of temperature on gas "
+       f"compressibility at a fixed pressure. As temperature increases, the kinetic energy of gas molecules increases, reducing the " 
+       f"influence of intermolecular attractive forces and causing the gas to behave more like an ideal gas. Consequently, the "
+       f"compressibility factor increases with temperature, approaching unity."
+    )
 
     st.markdown("#### Gas formation volume factor, Bg")
     fig = dual_plot(P_array, {"Bg": Bg_vs_P}, "Pressure (psia)",
@@ -431,11 +538,33 @@ with tab_gas:
                      "Bg (rcf/scf)", "Gas FVF")
     st.pyplot(fig, clear_figure=True)
 
+    st.info(
+        f"**Gas formation volume factor (Bg) as a function of pressure :** This plot illustrates the variation of Bg "
+        f"with pressure. As pressure increases, the gas is compressed into a smaller volume, resulting in a decrease in Bg. The rate of "
+        f"decrease becomes less pronounced at higher pressures as the gas becomes increasingly compressed."
+    )
+    st.info(
+        f"**Gas formation volume factor (Bg) as a function of temperature :** This plot illustrates the effect of "
+        f"temperature on Bg. Increasing temperature causes the gas to expand, resulting in a larger gas volume and consequently a "
+        f"higher gas formation volume factor."
+    )
+
     st.markdown("#### Gas viscosity")
     fig = dual_plot(P_array, {"mu_g": mu_g_vs_P}, "Pressure (psia)",
                      T_array, {"mu_g": mu_g_vs_T}, "Temperature (deg F)",
                      "Gas viscosity (cp)", "Gas viscosity")
     st.pyplot(fig, clear_figure=True)
+    st.info(
+        f"**Gas viscosity as a function of pressure :** This plot illustrates the variation of gas viscosity "
+        f"with pressure. As pressure increases, gas molecules become more closely packed, leading to more frequent molecular "
+        f"collisions and greater resistance to flow. Consequently, the gas viscosity increases with pressure."
+    )
+    st.info(
+        f"**Gas viscosity as a function of temperature :** This plot illustrates the effect of temperature on gas viscosity "
+        f"at the user-specified pressure. Depending on the selected pressure, the combined influence of increasing molecular kinetic energy "
+        f"and decreasing gas density governs the observed trend. At high pressure values, the Lee et al. "
+        f"correlation predicts a gradual decrease in gas viscosity with increasing temperature."
+    )
 
     st.markdown("#### Gas density")
     fig = dual_plot(P_array, {"rho_g": rho_g_vs_P}, "Pressure (psia)",
@@ -443,14 +572,17 @@ with tab_gas:
                      "Gas density (lbm/ft3)", "Gas density")
     st.pyplot(fig, clear_figure=True)
 
-    st.markdown("#### Gas compressibility, cg")
-    st.caption("From a numerical derivative of the Z(P) curve at fixed T; shown vs. pressure only.")
-    fig, ax = plt.subplots(figsize=(5.4, 3.4))
-    ax.plot(P_array, cg_vs_P, color="#8172B2")
-    ax.set_xlabel("Pressure (psia)")
-    ax.set_ylabel("cg (1/psi)")
-    ax.set_title("Gas compressibility vs. pressure")
-    st.pyplot(fig, clear_figure=True)
+    st.info(
+        f"**Gas density as a function of pressure :** This plot illustrates the variation of gas density "
+        f"with pressure. As pressure increases, gas molecules are compressed into a smaller volume, resulting in a progressive increase "
+        f"in gas density. "
+    )
+    st.info(
+        f"**Gas density as a function of temperature at constant pressure:** This plot illustrates the effect of temperature on gas density. "
+        f"Increasing temperature causes the gas to expand, increasing its volume while maintaining constant mass, and consequently reducing " 
+        f"its density."
+    )
+
 
 with tab_anom:
     st.subheader("Anomaly Check")
