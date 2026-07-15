@@ -6,8 +6,6 @@ A Streamlit dashboard for black-oil PVT property estimation.
  Streamlit App: https://black-oil-pvt-calculator.streamlit.app
 
 ## What it does
-Fifteen black-oil PVT properties, each with individual pressure- and
-temperature-sensitivity plots:
 
 **Oil**
 - Bubble-point pressure (Pb): Standing, Vasquez-Beggs, Glaso
@@ -29,8 +27,7 @@ temperature-sensitivity plots:
 An automated "Anomaly Check" tab flags out-of-range inputs, non-physical
 trends (Rs decreasing with pressure, Bo/density rising instead of falling
 above Pb, a missing viscosity minimum at Pb, Z-factor or Bg behaving
-unphysically, negative compressibilities, water properties drifting outside
-normal ranges), and explains the likely theoretical cause for each.
+unphysically, negative compressibilities), and explains the likely theoretical cause for each.
 
 ## Files
 - `app.py` — the Streamlit dashboard (all UI, plotting, and anomaly logic)
